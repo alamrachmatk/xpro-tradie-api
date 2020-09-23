@@ -3,17 +3,22 @@ package controllers
 import (
 	"api/config"
 	"api/db"
-	"encoding/json"
 	"api/lib"
 	"api/models"
+	"encoding/json"
+	"log"	
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/labstack/echo"
+	"github.com/disintegration/imaging"
 )
 
 func SignUp(c echo.Context) error  {
 	params := make(map[string]string)
+	var err error
 
 	// Get parameter first name
 	firstName := c.FormValue("first_name")
@@ -75,26 +80,12 @@ func SignUp(c echo.Context) error  {
 		params["abn_cn_number"] = abnCnNumber
 	}
 
-	// Get parameter driving licence
-	drivingLicence := c.FormValue("driving_licence")
-	if drivingLicence != "" {
-		params["driving_licence"] = drivingLicence
-	} else {
-		return lib.CustomError(http.StatusBadRequest)
-	}
-
 	// Get parameter photo id
 	photoId := c.FormValue("photo_id")
 	if photoId != "" {
 		params["photo_id"] = photoId
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
-	}
-
-	// Get parameter avatar
-	avatar := c.FormValue("avatar")
-	if avatar != "" {
-		params["avatar"] = avatar
 	}
 
 	// Get parameter avatar
@@ -105,10 +96,52 @@ func SignUp(c echo.Context) error  {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
+	var fileDl *multipart.FileHeader
+	fileDl, err = c.FormFile("driving_licence")
+	// Get file extension driving licence
+	extensionDl := filepath.Ext(fileDl.Filename)
+	// Generate filename driving licence
+	var filenameDl string
+	filenameDl = lib.RandStringBytesMaskImprSrc(20)
+	if fileDl != nil {
+		if err != nil {
+			return lib.CustomError(http.StatusBadRequest)
+		}
+		var httpError *echo.HTTPError
+		httpError = uploadDrivingLicence(fileDl, filenameDl, extensionDl)
+		if httpError.Code != http.StatusOK {
+			return httpError
+		}
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+	params["driving_licence"] = filenameDl + extensionDl
+
+	var fileAvatar *multipart.FileHeader
+	fileAvatar, err = c.FormFile("avatar")
+	// Get file extension driving licence
+	extensionAvatar := filepath.Ext(fileAvatar.Filename)
+	// Generate filename driving licence
+	var filenameAvatar string
+	filenameAvatar = lib.RandStringBytesMaskImprSrc(20)
+	if fileAvatar != nil {
+		if err != nil {
+			return lib.CustomError(http.StatusBadRequest)
+		}
+		var httpError *echo.HTTPError
+		httpError = uploadAvatar(fileAvatar, filenameAvatar, extensionAvatar)
+		if httpError.Code != http.StatusOK {
+			return httpError
+		}
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+	params["avatar"] = filenameAvatar + extensionAvatar
+
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
 	redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
-	_, err := redis.Bytes(redisPool.Do("GET", email))
+	_, err = redis.Bytes(redisPool.Do("GET", email))
 	if err != nil {
 		statusResponse := models.CreateCustomer(params)
 		if statusResponse != 200 {
@@ -117,7 +150,7 @@ func SignUp(c echo.Context) error  {
 		dataJSON, _ := json.Marshal(params)
 		redisPool.Do("SET", email, dataJSON)
 	} else {
-		return lib.CustomError(http.StatusForbidden, "Forbidden", "Email already in use")
+		return lib.CustomError(http.StatusForbidden)
 	}
 
 	var response lib.Response
@@ -127,4 +160,50 @@ func SignUp(c echo.Context) error  {
 
 	return c.JSON(http.StatusOK, response)
 
+}
+
+func uploadDrivingLicence(file *multipart.FileHeader, filenameDl string, extension string)  (*echo.HTTPError) {
+		var err error
+		// Upload image and move to proper directory
+		err = lib.UploadImage(file, config.MediaServerPathDl+"/"+filenameDl+extension)
+		if err != nil {
+			log.Println(err)
+			return lib.CustomError(http.StatusInternalServerError)
+		}
+		// Open a test image.
+		src, err := imaging.Open(config.MediaServerPathDl+"/"+filenameDl+extension)
+		if err != nil {
+			log.Println(err)
+			return lib.CustomError(http.StatusInternalServerError)
+		}
+		src = imaging.Resize(src, 500, 0, imaging.Lanczos)
+		err = imaging.Save(src, config.MediaServerPathDl+"/"+filenameDl+extension)
+		if err != nil {
+			log.Println(err)
+			return lib.CustomError(http.StatusInternalServerError)
+		}
+		return echo.NewHTTPError(http.StatusOK)
+}
+
+func uploadAvatar(file *multipart.FileHeader, filenameAvatar string, extension string)  (*echo.HTTPError) {
+	var err error
+	// Upload image and move to proper directory
+	err = lib.UploadImage(file, config.MediaServerPathAvatar+"/"+filenameAvatar+extension)
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+	// Open a test image.
+	src, err := imaging.Open(config.MediaServerPathAvatar+"/"+filenameAvatar+extension)
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+	src = imaging.Resize(src, 500, 0, imaging.Lanczos)
+	err = imaging.Save(src, config.MediaServerPathAvatar+"/"+filenameAvatar+extension)
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+	return echo.NewHTTPError(http.StatusOK)
 }

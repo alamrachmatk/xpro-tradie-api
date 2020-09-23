@@ -9,6 +9,9 @@ import (
 // General
 var	Host            string = "http://localhost:1323"
 var Port string = "1323"
+var MediaServerPath string = "D:/images"
+var MediaServerPathDl string = MediaServerPath + "/customers/driving-licence"
+var MediaServerPathAvatar string = MediaServerPath + "/customers/avatar"
 var	LimitQuery      uint64 = 100
 
 // MariaDB
@@ -50,6 +53,7 @@ type redis struct {
 type general struct {
 	Host            *string
 	Port            *string
+	MediaServerPath *string
 	LimitQuery      *uint64
 }
 
@@ -80,6 +84,9 @@ func InitConfig() error {
 	}
 	if cfg.General.Port != nil {
 		Port = *cfg.General.Port
+	}
+	if cfg.General.MediaServerPath != nil {
+		MediaServerPath = *cfg.General.MediaServerPath
 	}
 
 	// MariaDB
