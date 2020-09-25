@@ -23,6 +23,7 @@ func main() {
   // Routes
   // Customers
   e.POST("/signup", controllers.SignUp)
+  e.POST("/signin", controllers.SignIn)
 
   // Start server
   e.Logger.Fatal(e.Start(":1323"))

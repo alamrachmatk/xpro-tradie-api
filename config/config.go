@@ -30,7 +30,14 @@ var RedisMaxActive uint64 = 10000
 var RedisIdleTimeout uint64 = 5
 var RedisWait = true
 
-var RedisDBCacheCustomerByEmail int  = 0
+var RedisDBCacheToken int  = 0
+var RedisDBCacheCustomerByEmail int  = 1
+
+// Cache
+var ExpireToken uint64 = 3600        // 1 hour
+
+// JWT xspr0Tr@Die
+var JWTSecret string = "SL6ANV4cMfu2cBI240iV0xYLgv6RxUIh"
 
 type mariaDB struct {
 	MariaDBUser     *string
@@ -51,16 +58,23 @@ type redis struct {
 }
 
 type general struct {
-	Host            *string
-	Port            *string
-	MediaServerPath *string
-	LimitQuery      *uint64
+	Host            		*string
+	Port            		*string
+	MediaServerPath 		*string
+	MediaServerPathDl 		*string
+	MediaServerPathAvatar 	*string
+	LimitQuery      		*uint64
+}
+
+type jwt struct {
+	JWTSecret *string
 }
 
 type config struct {
 	General       general
 	MariaDB       mariaDB
 	Redis         redis
+	JWT           jwt
 }
 
 func InitConfig() error {
@@ -87,6 +101,12 @@ func InitConfig() error {
 	}
 	if cfg.General.MediaServerPath != nil {
 		MediaServerPath = *cfg.General.MediaServerPath
+	}
+	if cfg.General.MediaServerPathDl != nil {
+		MediaServerPathDl = *cfg.General.MediaServerPathDl
+	}
+	if cfg.General.MediaServerPathAvatar != nil {
+		MediaServerPathAvatar = *cfg.General.MediaServerPathAvatar
 	}
 
 	// MariaDB
@@ -121,6 +141,11 @@ func InitConfig() error {
 	}
 	if cfg.Redis.RedisDBCacheCustomerByEmail != nil {
 		RedisDBCacheCustomerByEmail = *cfg.Redis.RedisDBCacheCustomerByEmail
+	}
+
+	// JWT
+	if cfg.JWT.JWTSecret != nil {
+		JWTSecret = *cfg.JWT.JWTSecret
 	}
 	
 

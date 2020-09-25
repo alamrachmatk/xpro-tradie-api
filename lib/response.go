@@ -18,6 +18,13 @@ type Response struct {
 	Data   interface{} `json:"data"`
 }
 
+type ResponseToken struct {
+	Status 		Status      `json:"status"`
+	Token		string 		`json:"token"`
+	Email		string 		`json:"email"`
+	Expire		uint64 		`json:"expire"`
+}
+
 // CustomError Return custom error. Param: (code, message_server, message_client).
 //
 // Parameters:
@@ -65,6 +72,22 @@ type Response struct {
 // }
 func CustomError(code int, messages ...string) *echo.HTTPError {
 	var response Response
+	response.Status.Code = uint(code)
+	response.Status.MessageServer = http.StatusText(code)
+	response.Status.MessageClient = http.StatusText(code)
+	for index, value := range messages {
+		if index == 0 {
+			response.Status.MessageServer = value
+		}
+		if index == 1 {
+			response.Status.MessageClient = value
+		}
+	}
+	return echo.NewHTTPError(code, response)
+}
+
+func CustomErrorToken(code int, messages ...string) *echo.HTTPError {
+	var response ResponseToken
 	response.Status.Code = uint(code)
 	response.Status.MessageServer = http.StatusText(code)
 	response.Status.MessageClient = http.StatusText(code)
