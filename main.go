@@ -1,30 +1,40 @@
 package main
 
 import (
-  "api/db"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
-	"api/controllers"
+  "api/config"
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 func main() {
-  // Initialize main database
-  db.Db = db.MariaDBInit()
-  db.RedisPool = db.RedisPoolInit()
-  
-  // Echo instance
-  e := echo.New()
+  e := NewRouter()
 
-  // Middleware
-  e.Use(middleware.Logger())
-  e.Use(middleware.Recover())
+	// Configure server
+	s := &http.Server{
+		Addr:         "0.0.0.0:" + config.Port,
+		ReadTimeout:  config.ReadTimeout * time.Second,
+		WriteTimeout: config.WriteTimeout * time.Second,
+		IdleTimeout:  config.IdleTimeout * time.Second,
+	}
 
-  // Routes
-  // Customers
-  e.POST("/signup", controllers.SignUp)
-  e.POST("/signin", controllers.SignIn)
+	// Start server
+	go func() {
+		if err := e.StartServer(s); err != nil {
+			e.Logger.Info("Shutting down the server")
+		}
+	}()
 
-  // Start server
-  e.Logger.Fatal(e.Start(":1323"))
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	ctx := context.Background()
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	} else {
+		e.Logger.Info("Gracefully shutdown")
+	}
 }

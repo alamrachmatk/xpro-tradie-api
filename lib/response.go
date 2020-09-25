@@ -20,9 +20,8 @@ type Response struct {
 
 type ResponseToken struct {
 	Status 		Status      `json:"status"`
-	Token		string 		`json:"token"`
 	Email		string 		`json:"email"`
-	Expire		uint64 		`json:"expire"`
+	Token		string 		`json:"token"`
 }
 
 // CustomError Return custom error. Param: (code, message_server, message_client).

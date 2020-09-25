@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 )
 
 // General
@@ -13,6 +14,9 @@ var MediaServerPath string = "D:/images"
 var MediaServerPathDl string = MediaServerPath + "/customers/driving-licence"
 var MediaServerPathAvatar string = MediaServerPath + "/customers/avatar"
 var	LimitQuery      uint64 = 100
+var ReadTimeout time.Duration = 5
+var WriteTimeout time.Duration = 10
+var IdleTimeout time.Duration = 120
 
 // MariaDB
 var	MariaDBUser     string = "root"
@@ -64,6 +68,15 @@ type general struct {
 	MediaServerPathDl 		*string
 	MediaServerPathAvatar 	*string
 	LimitQuery      		*uint64
+	// ReadTimeout covers the time from when the connection is accepted to
+	// when the request body is fully read
+	ReadTimeout *time.Duration
+	// WriteTimeout normally covers the time from the end of the request
+	// header read to the end of the response write
+	WriteTimeout *time.Duration
+	// IdleTimeout which limits server-side the amount of time a Keep-Alive
+	// connection will be kept idle before being reused
+	IdleTimeout *time.Duration
 }
 
 type jwt struct {
@@ -107,6 +120,15 @@ func InitConfig() error {
 	}
 	if cfg.General.MediaServerPathAvatar != nil {
 		MediaServerPathAvatar = *cfg.General.MediaServerPathAvatar
+	}
+	if cfg.General.ReadTimeout != nil {
+		ReadTimeout = *cfg.General.ReadTimeout
+	}
+	if cfg.General.WriteTimeout != nil {
+		WriteTimeout = *cfg.General.WriteTimeout
+	}
+	if cfg.General.IdleTimeout != nil {
+		IdleTimeout = *cfg.General.IdleTimeout
 	}
 
 	// MariaDB
