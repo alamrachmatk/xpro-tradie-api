@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"strconv"
 	"time"
 
@@ -49,7 +50,6 @@ func SignUp(c echo.Context) error  {
 		// check duplicate email/telp
 		redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
 		_, err = redis.Bytes(redisPool.Do("GET", email))
-		log.Println("err email" + email)
 		if err == nil {
 			return lib.CustomError(http.StatusForbidden)
 		}
@@ -165,7 +165,7 @@ func SignUp(c echo.Context) error  {
 	_, err = redis.Bytes(redisPool.Do("GET", email))
 	if err != nil {
 		statusResponse, lastID := models.CreateCustomer(params)
-		params["id"] = strconv.Itoa(int(lastID))
+		params["customer_id"] = strconv.Itoa(int(lastID))
 		if statusResponse != 200 {
 			return lib.CustomError(http.StatusInternalServerError)
 		}
@@ -263,7 +263,7 @@ func SignIn(c echo.Context) error {
 		return lib.CustomError(http.StatusUnauthorized, "Unauthorized", "Please check your email and password")
 	}
 
-	var customer models.CustomerData
+	var customer models.CustomerDataCache
 	err = json.Unmarshal([]byte(dataStr), &customer)
 	if err != nil {
 		log.Println("error unmarshalProperties:", err)
@@ -279,6 +279,7 @@ func SignIn(c echo.Context) error {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"customer_id": customer.CustomerID,
 		"email": customer.Email,
 		"password":  customer.Password,
 		"user-agent": useragent,
@@ -295,16 +296,50 @@ func SignIn(c echo.Context) error {
 	redisPoolToken := db.RedisPool.Get()
 	defer redisPoolToken.Close()
 	redisPoolToken.Do("SELECT", config.RedisDBCacheToken)
-	redisPoolToken.Do("SET", tokenString+".exist", "true")
-	redisPoolToken.Do("EXPIRE", tokenString+".exist", config.ExpireToken)
+	redisPoolToken.Do("SET", tokenString, "true")
+	redisPoolToken.Do("EXPIRE", tokenString, config.ExpireToken)
 
 	var response lib.ResponseToken
 	response.Status.Code = http.StatusOK
 	response.Status.MessageServer = "OK"
 	response.Status.MessageClient = "OK"
-	response.Token = tokenString
 	response.Email = customer.Email
-	response.Expire = 232424
+	response.Token = tokenString
+
+	return c.JSON(http.StatusOK, response)
+}
+
+func LogOut(c echo.Context) error {
+	// Get authorization token
+	var token string
+	request := c.Request()
+	authorization := request.Header["Authorization"]
+	if authorization != nil {
+		if strings.HasPrefix(authorization[0], "Bearer ") == true {
+			token = authorization[0][7:]
+			log.Println(token)
+		}
+	}
+
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	_, err := redis.Bytes(redisPool.Do("GET", token))
+	if err != nil {
+		log.Println("No user login with browser:", token)
+		return lib.CustomError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	// Remove token from Redis
+	redisPoolRt := db.RedisPool.Get()
+	defer redisPoolRt.Close()
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	redisPool.Do("DEL", token)
+
+	var response lib.Response
+	response.Status.Code = http.StatusOK
+	response.Status.MessageServer = "OK"
+	response.Status.MessageClient = "OK"
 
 	return c.JSON(http.StatusOK, response)
 }

@@ -4,6 +4,7 @@ import (
 	"api/db"
 	"log"
 	"net/http"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -25,8 +26,8 @@ type Customer struct {
 	Status		 		string  `db:"status" json:"status"`
 }
 
-type CustomerData struct {
-	CustomerID       	uint64  `json:"customer_id"`
+type CustomerDataCache struct {
+	CustomerID       	string  `json:"customer_id"`
 	FirstName		 	string  `json:"first_name"`
 	LastName		 	string  `json:"last_name"`
 	Email		 	 	string  `json:"email"`
@@ -40,6 +41,50 @@ type CustomerData struct {
 	PhotoId	 			string  `json:"photo_id"`
 	Avatar		 		*string  `json:"avatar"`
 	Status		 		string  `json:"status"`
+}
+
+type CustomerData struct {
+	CustomerID       	uint64  `json:"customer_id"`
+	FirstName		 	string  `json:"first_name"`
+	LastName		 	string  `json:"last_name"`
+	Email		 	 	string  `json:"email"`
+	Phone		 	 	string  `json:"phone"`
+	Address		 	 	string  `json:"address"`
+	Category		 	string  `json:"category"`
+	CompanyName		 	*string  `json:"company_name"`
+	AbnCnNumber		 	*string  `json:"abn_cn_number"`
+	DrivingLicence	 	string  `json:"driving_licence"`
+	PhotoId	 			string  `json:"photo_id"`
+	Avatar		 		*string  `json:"avatar"`
+	Status		 		string  `json:"status"`
+}
+
+func GetCustomer(c *Customer, id string) int {
+	query := `SELECT
+	customers.id,
+	customers.first_name,
+	customers.last_name,
+	customers.email,
+	customers.phone,
+	customers.address,
+	customers.category,
+	customers.company_name,
+	customers.abn_cn_number,
+	customers.driving_licence,
+	customers.photo_id,
+	customers.avatar,
+	customers.status
+	FROM customers
+	WHERE customers.id = ?`
+
+	log.Println(query)
+	err := db.Db.Get(c, query, id)
+	if err != nil {
+		log.Println(err)
+		return http.StatusNotFound
+	}
+
+	return http.StatusOK
 }
 
 func CreateCustomer(params map[string]string) (int, int64) {
@@ -77,4 +122,30 @@ func CreateCustomer(params map[string]string) (int, int64) {
 		return http.StatusBadRequest, lastID
 	}
 	return http.StatusOK, lastID
+}
+
+func UpdateCustomer(channel map[string]string, id string) int {
+	query := "UPDATE customers SET "
+	i := 0
+	for key, value := range channel {
+		query += "`" + key + "`" + " = '" + strings.Replace(value, "'", "\\'", -1) + "'"
+		if (len(channel) - 1) > i {
+			query += ", "
+		}
+		i++
+	}
+	query += " WHERE id = " + id
+	log.Println(query)
+	tx, err := db.Db.Begin()
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadGateway
+	}
+	_, err = tx.Exec(query)
+	tx.Commit()
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
 }

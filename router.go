@@ -23,11 +23,14 @@ func NewRouter() *echo.Echo {
   e.Use(middleware.Recover())
 
   // Routes
-  // Customers Auth
+  // Auth
   e.POST("/signup", controllers.SignUp)
   e.POST("/signin", controllers.SignIn)
   e.POST("/logout", controllers.LogOut)
 
+  // Customer
+  e.GET("/customerdata", controllers.CustomerData)
+  e.PUT("/customer/:id", controllers.UpdateCustomerData)
   // Start server
   e.Logger.Fatal(e.Start(":1323"))
 
