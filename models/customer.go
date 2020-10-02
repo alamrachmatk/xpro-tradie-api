@@ -2,6 +2,7 @@ package models
 
 import (
 	"api/db"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -85,6 +86,47 @@ func GetCustomer(c *Customer, id string) int {
 	}
 
 	return http.StatusOK
+}
+
+func GetCustomerIn(u *[]Customer, id ...string) (int, error) {
+	if len(id) == 0 {
+		return http.StatusNotFound, errors.New("no supplied IDs")
+	}
+	query := `
+	SELECT
+	customers.id,
+	customers.first_name,
+	customers.last_name,
+	customers.email,
+	customers.phone,
+	customers.address,
+	customers.category,
+	customers.company_name,
+	customers.abn_cn_number,
+	customers.driving_licence,
+	customers.photo_id,
+	customers.avatar,
+	customers.status
+	FROM customers
+	WHERE customers.id 
+	IN(`
+	for index, value := range id {
+		query += value
+		if (len(id) - 1) > index {
+			query += ", "
+		} else {
+			query += ")"
+		}
+	}
+	var customers []Customer
+	log.Println(query)
+	err := db.Db.Select(&customers, query)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+
+	return http.StatusOK, nil
 }
 
 func CreateCustomer(params map[string]string) (int, int64) {

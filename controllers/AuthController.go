@@ -343,3 +343,86 @@ func LogOut(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, response)
 }
+
+func ResetPassword(c echo.Context) error {
+	// Get authorization token
+	var token string
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	request := c.Request()
+	authorization := request.Header["Authorization"]
+	if authorization != nil {
+		if strings.HasPrefix(authorization[0], "Bearer ") == true {
+			token = authorization[0][7:]
+		}
+	}
+
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	_, err := redis.String(redisPool.Do("GET", token))
+	if err != nil {
+		return lib.CustomError(http.StatusForbidden)
+	}
+
+	tokenMap, err := lib.ExtractClaims(token)
+	if err != nil {
+		return lib.CustomError(http.StatusBadGateway)
+	} 
+
+	idCache := tokenMap["customer_id"]
+	passwordCache := tokenMap["password"]
+
+	params := make(map[string]string)
+	idStr := c.Param("id")
+	if idStr != "" {
+		id, _ := strconv.ParseUint(idStr, 10, 64)
+		if id > 0 {
+			params["id"] = strconv.FormatUint(id,10)
+			var customer models.Customer
+			status := models.GetCustomer(&customer, idStr)
+			if status != http.StatusOK {
+				return lib.CustomError(http.StatusNotFound)
+			}
+		}
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	if idCache != idStr {
+		return lib.CustomError(http.StatusForbidden)
+	}
+
+	oldPassword := c.FormValue("old_password")
+	if oldPassword != "" {
+		params["old_password"] = oldPassword
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	newPassword := c.FormValue("new_password")
+	if newPassword != "" {
+		params["new_password"] = newPassword
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	confirmNewPassword := c.FormValue("confirm_new_password")
+	if confirmNewPassword != "" {
+		params["confirm_new_password"] = confirmNewPassword
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	if newPassword != confirmNewPassword {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	if oldPassword != passwordCache {
+		return lib.CustomError(http.StatusForbidden)
+	}
+	var response lib.Response
+	response.Status.Code = http.StatusOK
+	response.Status.MessageServer = "OK"
+	response.Status.MessageClient = "OK"
+	
+	return c.JSON(http.StatusOK, response)
+}

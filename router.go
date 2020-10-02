@@ -27,10 +27,18 @@ func NewRouter() *echo.Echo {
   e.POST("/signup", controllers.SignUp)
   e.POST("/signin", controllers.SignIn)
   e.POST("/logout", controllers.LogOut)
+  e.PUT("/resetpassword/:id", controllers.ResetPassword)
 
   // Customer
-  e.GET("/customerdata", controllers.CustomerData)
+  e.GET("/customerdata/:id", controllers.CustomerData)
   e.PUT("/customer/:id", controllers.UpdateCustomerData)
+
+  // Bidding
+  e.GET("/biddings", controllers.GetAllBidding)
+
+  // Work Order
+  e.GET("/workorders", controllers.GetAllWorkOrder)
+
   // Start server
   e.Logger.Fatal(e.Start(":1323"))
 

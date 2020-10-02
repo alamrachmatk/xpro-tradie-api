@@ -127,6 +127,7 @@ func UpdateCustomerData(c echo.Context) error {
 		id, _ := strconv.ParseUint(idStr, 10, 64)
 		if id > 0 {
 			params["id"] = strconv.FormatUint(id,10)
+			log.Println("kl", params["id"])
 			var customer models.Customer
 			status := models.GetCustomer(&customer, idStr)
 			if status != http.StatusOK {
