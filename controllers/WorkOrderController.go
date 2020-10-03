@@ -2,10 +2,14 @@ package controllers
 
 import (
 	"api/config"
+	"api/db"
 	"api/lib"
 	"api/models"
+	"log"
 	"net/http"
+	"strings"
 	"strconv"
+	"github.com/garyburd/redigo/redis"
 	"github.com/labstack/echo"
 )
 
@@ -107,4 +111,99 @@ func WorkOrderListQuery(limit uint64, offset uint64, pagination bool) (uint64, [
 	}
 
 	return total, responseData, lib.CustomError(http.StatusOK)
+}
+
+func WorkOrderData(c echo.Context) error {
+	// Get authorization token
+	var token string
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	request := c.Request()
+	authorization := request.Header["Authorization"]
+	if authorization != nil {
+		if strings.HasPrefix(authorization[0], "Bearer ") == true {
+			token = authorization[0][7:]
+		}
+	}
+
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	_, err := redis.String(redisPool.Do("GET", token))
+	if err != nil {
+		return lib.CustomError(http.StatusForbidden)
+	}
+
+	// Get parameter param
+	paramStr := c.Param("id")
+	log.Println("paramStr", paramStr)
+
+	var workorder models.WorkOrder
+	var data models.WorkOrderData
+	status := models.GetWorkOrder(&workorder, paramStr)
+	if status == 404 {
+		return lib.CustomError(http.StatusNotFound)
+	}
+
+	data.WorkOrderID = workorder.WorkOrderID
+	if workorder.Status == 0 {
+		data.Status = "Cancel"
+	} else if workorder.Status == 1 {
+		data.Status = "Ongoing"
+	} else if workorder.Status == 2 {
+		data.Status = "Ready"
+	} else if workorder.Status == 3 {
+		data.Status = "Pending"
+	}
+
+	var response lib.Response
+	response.Status.Code = http.StatusOK
+	response.Status.MessageServer = "OK"
+	response.Status.MessageClient = "OK"
+	response.Data = data
+
+	return c.JSON(http.StatusOK, response)
+
+
+}
+
+func CreateWorkder(c echo.Context) error {
+	// Get authorization token
+	var token string
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	request := c.Request()
+	authorization := request.Header["Authorization"]
+	if authorization != nil {
+		if strings.HasPrefix(authorization[0], "Bearer ") == true {
+			token = authorization[0][7:]
+		}
+	}
+
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	_, err := redis.String(redisPool.Do("GET", token))
+	if err != nil {
+		return lib.CustomError(http.StatusForbidden)
+	}
+	
+	workorder := make(map[string]string)
+
+	// Get parameter first name
+	status := c.FormValue("status")
+	if status != "" {
+		workorder["status"] = status
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	statusResponse, _ := models.CreateWorkOrder(workorder)
+	if statusResponse != 200 {
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+
+	var response lib.Response
+	response.Status.Code = http.StatusOK
+	response.Status.MessageServer = "OK"
+	response.Status.MessageClient = "OK"
+
+	return c.JSON(http.StatusOK, response)
+
 }

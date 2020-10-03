@@ -3,6 +3,7 @@ package models
 import (
 	"api/db"
 	"log"
+	"net/http"
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -16,6 +17,11 @@ type WorkOrder struct {
 type WorkOrderList struct {
 	WorkOrderID		uint64	`db:"id" json:"worker_id"`
 	Status			string	`db:"status" json:"status"`
+}
+
+type WorkOrderData struct {
+	WorkOrderID		uint64	`json:"worker_id"`
+	Status			string	`json:"status"`
 }
 
 func GetAllWorkOrder(c *[]WorkOrder, limit uint64, offset uint64, pagination bool, params map[string]string) (uint64, error) {
@@ -78,4 +84,50 @@ func GetAllWorkOrder(c *[]WorkOrder, limit uint64, offset uint64, pagination boo
 	}
 
 	return total, nil
+}
+
+func GetWorkOrder(c *WorkOrder, id string) int {
+	query := "SELECT work_orders.id, work_orders.status FROM work_orders WHERE id = " + id
+	log.Println(query)
+	err := db.Db.Get(c, query)
+	if err != nil {
+		log.Println(err)
+		return http.StatusNotFound
+	}
+	return http.StatusOK
+}
+
+func CreateWorkOrder(workorder map[string]string) (int, int64) {
+	query := "INSERT INTO work_orders("
+	var fields = ""
+	var values = ""
+	i := 0
+	for key, value := range workorder {
+		fields += "`" + key + "`"
+		values += "'" + value + "'"
+		if (len(workorder) - 1) > i {
+			fields += ", "
+			values += ", "
+		}
+		i++
+	}
+
+	query += fields + ", created_at) VALUES(" + values + ", NOW())"
+	tx, err := db.Db.Begin()
+	var lastID int64
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadGateway, lastID
+	}
+	result, err := tx.Exec(query)
+	if err != nil {
+		log.Println(err)
+	}
+	lastID, err = result.LastInsertId()
+	tx.Commit()
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadRequest, lastID
+	}
+	return http.StatusOK, lastID
 }

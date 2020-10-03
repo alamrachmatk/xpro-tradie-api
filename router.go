@@ -23,6 +23,7 @@ func NewRouter() *echo.Echo {
   e.Use(middleware.Recover())
 
   // Routes
+  apps := e.Group("/apiv1")
   // Auth
   e.POST("/signup", controllers.SignUp)
   e.POST("/signin", controllers.SignIn)
@@ -35,9 +36,18 @@ func NewRouter() *echo.Echo {
 
   // Bidding
   e.GET("/biddings", controllers.GetAllBidding)
+  apps.PUT("/approvebidding/:id", controllers.ApproveBidding)
 
   // Work Order
-  e.GET("/workorders", controllers.GetAllWorkOrder)
+  apps.POST("/workorder", controllers.CreateWorkder)
+  apps.GET("/workorders", controllers.GetAllWorkOrder)
+  apps.GET("/workorderdata/:id", controllers.WorkOrderData)
+
+  // New Order
+  apps.POST("/neworder", controllers.CreateNewOrder)
+
+  
+  
 
   // Start server
   e.Logger.Fatal(e.Start(":1323"))

@@ -2,11 +2,15 @@ package controllers
 
 import (
 	"api/config"
+	"api/db"
 	"api/lib"
 	"api/models"
 	"net/http"
 	"strconv"
+	"strings"
+
 	"github.com/labstack/echo"
+	"github.com/garyburd/redigo/redis"
 )
 
 func GetAllBidding(c echo.Context) error {
@@ -126,4 +130,62 @@ func BiddingListQuery(limit uint64, offset uint64, pagination bool) (uint64, []m
 	}
 
 	return total, responseData, lib.CustomError(http.StatusOK)
+}
+
+func ApproveBidding(c echo.Context) error {
+	// Get authorization token
+	var token string
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	request := c.Request()
+	authorization := request.Header["Authorization"]
+	if authorization != nil {
+		if strings.HasPrefix(authorization[0], "Bearer ") == true {
+			token = authorization[0][7:]
+		}
+	}
+
+	redisPool.Do("SELECT", config.RedisDBCacheToken)
+	_, err := redis.String(redisPool.Do("GET", token))
+	if err != nil {
+		return lib.CustomError(http.StatusForbidden)
+	}
+
+	idStr := c.Param ("id")
+	if idStr != "" {
+		id, _ := strconv.ParseUint(idStr, 10, 64)
+		if id > 0 {
+			var bidding models.Bidding
+			status := models.GetBidding(&bidding, idStr)
+			if status != http.StatusOK {
+				return lib.CustomError(http.StatusNotFound)
+			}
+		}
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	params := make(map[string]string)
+
+	// Get parameter status
+	status := c.FormValue("status")
+	if status != "" {
+		params["status"] = status
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
+	}
+
+	statusUpdate := models.UpdateBidding(params, idStr)
+	if statusUpdate != http.StatusOK {
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+
+	var response lib.Response
+	response.Status.Code = http.StatusOK
+	response.Status.MessageServer = "OK"
+	response.Status.MessageClient = "OK"
+
+	return c.JSON(http.StatusOK, response)
+
+
 }

@@ -3,7 +3,9 @@ package models
 import (
 	"api/db"
 	"log"
+	"net/http"
 	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -97,4 +99,51 @@ func GetAllBidding(c *[]Bidding, limit uint64, offset uint64, pagination bool, p
 	}
 
 	return total, nil
+}
+
+
+func GetBidding(c *Bidding, id string) int {
+	query := `SELECT
+	biddings.id,
+	biddings.company_id,
+	biddings.labor_time,
+	biddings.price,
+	biddings.description
+	FROM biddings
+	WHERE biddings.id = ?`
+
+	log.Println(query)
+	err := db.Db.Get(c, query, id)
+	if err != nil {
+		log.Println(err)
+		return http.StatusNotFound
+	}
+
+	return http.StatusOK
+}
+
+func UpdateBidding(bidding map[string]string, id string) int {
+	query := "UPDATE biddings SET "
+	i := 0
+	for key, value := range bidding {
+		query += "`" + key + "`" + " = '" + strings.Replace(value, "'", "\\'", -1) + "'"
+		if (len(bidding) - 1) > i {
+			query += ", "
+		}
+		i++
+	}
+	query += " WHERE id = " + id
+	log.Println(query)
+	tx, err := db.Db.Begin()
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadGateway
+	}
+	_, err = tx.Exec(query)
+	tx.Commit()
+	if err != nil {
+		log.Println(err)
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
 }
