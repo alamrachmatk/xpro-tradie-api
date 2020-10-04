@@ -5,7 +5,6 @@ import (
 	"api/db"
 	"api/lib"
 	"api/models"
-	"encoding/json"
 	"encoding/base64"
 	"log"	
 	"mime/multipart"
@@ -23,11 +22,9 @@ import (
 )
 
 func SignUp(c echo.Context) error  {
-	params := make(map[string]string)
 	var err error
-	redisPool := db.RedisPool.Get()
-	defer redisPool.Close()
-
+	params := make(map[string]string)
+	
 	// Get parameter first name
 	firstName := c.FormValue("first_name")
 	if firstName != "" {
@@ -47,12 +44,6 @@ func SignUp(c echo.Context) error  {
 	// Get parameter email
 	email := c.FormValue("email")
 	if email != "" {
-		// check duplicate email/telp
-		redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
-		_, err = redis.Bytes(redisPool.Do("GET", email))
-		if err == nil {
-			return lib.CustomError(http.StatusForbidden)
-		}
 		params["email"] = email
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
@@ -111,13 +102,7 @@ func SignUp(c echo.Context) error  {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
-	// Get parameter avatar
-	status := c.FormValue("status")
-	if status != "" {
-		params["status"] = status
-	} else {
-		return lib.CustomError(http.StatusBadRequest)
-	}
+	params["status"] = "1"
 
 	var fileDl *multipart.FileHeader
 	fileDl, err = c.FormFile("driving_licence")
@@ -161,27 +146,24 @@ func SignUp(c echo.Context) error  {
 	}
 	params["avatar"] = filenameAvatar + extensionAvatar
 
-	redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
-	_, err = redis.Bytes(redisPool.Do("GET", email))
-	if err != nil {
-		statusResponse, lastID := models.CreateCustomer(params)
-		params["customer_id"] = strconv.Itoa(int(lastID))
-		if statusResponse != 200 {
-			return lib.CustomError(http.StatusInternalServerError)
-		}
-		dataJSON, _ := json.Marshal(params)
-		redisPool.Do("SET", email, dataJSON)
-	} else {
-		return lib.CustomError(http.StatusForbidden)
+	var customerbyemail models.Customer
+	checkEmail := models.GetCustomerEmail(&customerbyemail, email)
+	if checkEmail == http.StatusOK {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, email address is already registered")
 	}
 
+	statusResponse, lastID := models.CreateCustomer(params)
+	params["customer_id"] = strconv.Itoa(int(lastID))
+	if statusResponse != 200 {
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+	
 	var response lib.Response
 	response.Status.Code = http.StatusOK
 	response.Status.MessageServer = "OK"
 	response.Status.MessageClient = "OK"
 
 	return c.JSON(http.StatusOK, response)
-
 }
 
 func uploadDrivingLicence(file *multipart.FileHeader, filenameDl string, extension string)  (*echo.HTTPError) {
@@ -231,10 +213,8 @@ func uploadAvatar(file *multipart.FileHeader, filenameAvatar string, extension s
 }
 
 func SignIn(c echo.Context) error {
-
-	params:= make(map[string]string)
 	var err error
-
+	params:= make(map[string]string)
 	request := c.Request()
 	useragent := request.Header.Get("User-Agent")
 
@@ -254,28 +234,15 @@ func SignIn(c echo.Context) error {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
-	redisPool := db.RedisPool.Get()
-	defer redisPool.Close()
-	redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
-	dataStr, err := redis.Bytes(redisPool.Do("GET", email))
-	if err != nil {
-		log.Println("No user with email:", email)
-		return lib.CustomError(http.StatusUnauthorized, "Unauthorized", "Please check your email and password")
-	}
-
-	var customer models.CustomerDataCache
-	err = json.Unmarshal([]byte(dataStr), &customer)
-	if err != nil {
-		log.Println("error unmarshalProperties:", err)
-		return lib.CustomError(http.StatusInternalServerError,
-			"Sorry, we've experience a problem. Please try again.",
-			"Internal server error")
+	var customer models.Customer
+	checkEmail := models.GetCustomerEmail(&customer, email)
+	if checkEmail != http.StatusOK {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, email is not registered")
 	}
 	
 	passwordDecode, _ := base64.StdEncoding.DecodeString(customer.Password)
 	if password != string(passwordDecode) {
-		log.Println("Invalid password")
-		return lib.CustomError(http.StatusUnauthorized, "Unauthorized", "Please check your email and password")
+		return lib.CustomError(http.StatusUnauthorized, "Unauthorized", "password invalid")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -363,21 +330,14 @@ func ResetPassword(c echo.Context) error {
 		return lib.CustomError(http.StatusForbidden)
 	}
 
-	tokenMap, err := lib.ExtractClaims(token)
-	if err != nil {
-		return lib.CustomError(http.StatusBadGateway)
-	} 
-
-	idCache := tokenMap["customer_id"]
-	passwordCache := tokenMap["password"]
-
 	params := make(map[string]string)
 	idStr := c.Param("id")
+
+	var customer models.Customer
 	if idStr != "" {
 		id, _ := strconv.ParseUint(idStr, 10, 64)
 		if id > 0 {
 			params["id"] = strconv.FormatUint(id,10)
-			var customer models.Customer
 			status := models.GetCustomer(&customer, idStr)
 			if status != http.StatusOK {
 				return lib.CustomError(http.StatusNotFound)
@@ -386,39 +346,46 @@ func ResetPassword(c echo.Context) error {
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
 	}
-
-	if idCache != idStr {
-		return lib.CustomError(http.StatusForbidden)
-	}
-
+	 
 	oldPassword := c.FormValue("old_password")
 	if oldPassword != "" {
-		params["old_password"] = oldPassword
+		oldPassword = base64.StdEncoding.EncodeToString([]byte(oldPassword))
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
-	newPassword := c.FormValue("new_password")
-	if newPassword != "" {
-		params["new_password"] = newPassword
+	password := c.FormValue("password")
+	if password != "" {
+		password = base64.StdEncoding.EncodeToString([]byte(password))
+		params["password"] = password
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
-	confirmNewPassword := c.FormValue("confirm_new_password")
-	if confirmNewPassword != "" {
-		params["confirm_new_password"] = confirmNewPassword
+	confirmPassword := c.FormValue("confirm_password")
+	if confirmPassword != "" {
+		confirmPassword = base64.StdEncoding.EncodeToString([]byte(confirmPassword))
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
-	if newPassword != confirmNewPassword {
-		return lib.CustomError(http.StatusBadRequest)
+	if oldPassword != customer.Password {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, old password not valid")
 	}
 
-	if oldPassword != passwordCache {
-		return lib.CustomError(http.StatusForbidden)
+	if password == oldPassword {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, password already in use")
 	}
+
+	if password != confirmPassword {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, password confirm not valid")
+	}
+
+	status := models.UpdateCustomer(params, idStr)
+	if status != http.StatusOK {
+		return lib.CustomError(http.StatusInternalServerError)
+	}
+
 	var response lib.Response
 	response.Status.Code = http.StatusOK
 	response.Status.MessageServer = "OK"

@@ -23,28 +23,28 @@ func NewRouter() *echo.Echo {
   e.Use(middleware.Recover())
 
   // Routes
-  apps := e.Group("/apiv1")
+  api := e.Group("/apiv1")
   // Auth
-  e.POST("/signup", controllers.SignUp)
-  e.POST("/signin", controllers.SignIn)
-  e.POST("/logout", controllers.LogOut)
-  e.PUT("/resetpassword/:id", controllers.ResetPassword)
+  api.POST("/signup", controllers.SignUp)
+  api.POST("/signin", controllers.SignIn)
+  api.POST("/logout", controllers.LogOut)
+  api.PUT("/resetpassword/:id", controllers.ResetPassword)
 
   // Customer
-  e.GET("/customerdata/:id", controllers.CustomerData)
-  e.PUT("/customer/:id", controllers.UpdateCustomerData)
+  api.GET("/customerdata/:id", controllers.CustomerData)
+  api.PUT("/customer/:id", controllers.UpdateCustomerData)
 
   // Bidding
-  e.GET("/biddings", controllers.GetAllBidding)
-  apps.PUT("/approvebidding/:id", controllers.ApproveBidding)
+  api.GET("/biddings", controllers.GetAllBidding)
+  api.PUT("/approvebidding/:id", controllers.ApproveBidding)
 
   // Work Order
-  apps.POST("/workorder", controllers.CreateWorkder)
-  apps.GET("/workorders", controllers.GetAllWorkOrder)
-  apps.GET("/workorderdata/:id", controllers.WorkOrderData)
+  api.POST("/workorder", controllers.CreateWorkder)
+  api.GET("/workorders", controllers.GetAllWorkOrder)
+  api.GET("/workorderdata/:id", controllers.WorkOrderData)
 
   // New Order
-  apps.POST("/neworder", controllers.CreateNewOrder)
+  api.POST("/neworder", controllers.CreateNewOrder)
 
   
   

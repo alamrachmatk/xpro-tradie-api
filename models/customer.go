@@ -66,6 +66,7 @@ func GetCustomer(c *Customer, id string) int {
 	customers.first_name,
 	customers.last_name,
 	customers.email,
+	customers.password,
 	customers.phone,
 	customers.address,
 	customers.category,
@@ -129,10 +130,27 @@ func GetCustomerIn(u *[]Customer, id ...string) (int, error) {
 	return http.StatusOK, nil
 }
 
+func GetCustomerEmail(c *Customer, params string) int {
+	query := `SELECT
+	customers.id,
+	customers.email,
+	customers.password
+	FROM customers
+	WHERE customers.email = ?`
+
+	log.Println(query)
+	err := db.Db.Get(c, query, params)
+	if err != nil {
+		log.Println(err)
+		return http.StatusNotFound
+	}
+	return http.StatusOK
+}
+
 func CreateCustomer(params map[string]string) (int, int64) {
 	query := "INSERT INTO customers("
-	// Get params
-	var fields, values string
+	var fields = ""
+	var values = ""
 	i := 0
 	for key, value := range params {
 		fields += "`" + key + "`"
@@ -143,10 +161,8 @@ func CreateCustomer(params map[string]string) (int, int64) {
 		}
 		i++
 	}
-	// Combile params to build query
-	query += fields + ") VALUES(" + values + ")"
-	log.Println(query)
 
+	query += fields + ", created_at) VALUES(" + values + ", NOW())"
 	tx, err := db.Db.Begin()
 	var lastID int64
 	if err != nil {
@@ -166,12 +182,12 @@ func CreateCustomer(params map[string]string) (int, int64) {
 	return http.StatusOK, lastID
 }
 
-func UpdateCustomer(channel map[string]string, id string) int {
+func UpdateCustomer(customer map[string]string, id string) int {
 	query := "UPDATE customers SET "
 	i := 0
-	for key, value := range channel {
+	for key, value := range customer {
 		query += "`" + key + "`" + " = '" + strings.Replace(value, "'", "\\'", -1) + "'"
-		if (len(channel) - 1) > i {
+		if (len(customer) - 1) > i {
 			query += ", "
 		}
 		i++
