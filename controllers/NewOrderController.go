@@ -7,6 +7,7 @@ import (
 	"api/models"
 	"net/http"
 	"strings"
+	"time"
 	"github.com/garyburd/redigo/redis"
 	"github.com/labstack/echo"
 )
@@ -86,6 +87,13 @@ func CreateNewOrder(c echo.Context) error {
 		return lib.CustomError(http.StatusBadRequest)
 	}
 
+	timeLayout := "2006-01-02 15:04:05"
+	timeNow := time.Now()
+	pareseDueDate, _ := time.Parse(timeLayout, dueDate)
+	if timeNow.Format("2006-01-02 15:04:05") >= pareseDueDate.Format("2006-01-02 15:04:05") {
+		return lib.CustomError(http.StatusForbidden, "Forbidden", "The due date is less than the current date")
+	}
+	
 	statusResponse, _ := models.CreateNewOrder(params)
 	if statusResponse != 200 {
 		return lib.CustomError(http.StatusInternalServerError)
