@@ -146,9 +146,9 @@ func SignUp(c echo.Context) error  {
 	}
 	params["avatar"] = filenameAvatar + extensionAvatar
 
-	var customerbyemail models.Customer
-	checkEmail := models.GetCustomerEmail(&customerbyemail, email)
-	if checkEmail == http.StatusOK {
+	var customer models.Customer
+	status := models.GetCustomerEmail(&customer, email)
+	if status == http.StatusOK {
 		return lib.CustomError(http.StatusForbidden, "Forbidden", "Forbidden, email address is already registered")
 	}
 

@@ -18,30 +18,13 @@ type Customer struct {
 	Password		 	string  `db:"password" json:"password"`
 	Phone		 	 	string  `db:"phone" json:"phone"`
 	Address		 	 	string  `db:"address" json:"address"`
-	Category		 	uint64  `db:"category" json:"category"`
+	Category		 	uint8  `db:"category" json:"category"`
 	CompanyName		 	*string  `db:"company_name" json:"company_name"`
 	AbnCnNumber		 	*string  `db:"abn_cn_number" json:"abn_cn_number"`
 	DrivingLicence	 	string  `db:"driving_licence" json:"driving_licence"`
 	PhotoId	 			string  `db:"photo_id" json:"photo_id"`
 	Avatar		 		*string  `db:"avatar" json:"avatar"`
-	Status		 		string  `db:"status" json:"status"`
-}
-
-type CustomerDataCache struct {
-	CustomerID       	string  `json:"customer_id"`
-	FirstName		 	string  `json:"first_name"`
-	LastName		 	string  `json:"last_name"`
-	Email		 	 	string  `json:"email"`
-	Password		 	string  `json:"password"`
-	Phone		 	 	string  `json:"phone"`
-	Address		 	 	string  `json:"address"`
-	Category		 	string  `json:"category"`
-	CompanyName		 	*string  `json:"company_name"`
-	AbnCnNumber		 	*string  `json:"abn_cn_number"`
-	DrivingLicence	 	string  `json:"driving_licence"`
-	PhotoId	 			string  `json:"photo_id"`
-	Avatar		 		*string  `json:"avatar"`
-	Status		 		string  `json:"status"`
+	Status		 		uint8  `db:"status" json:"status"`
 }
 
 type CustomerData struct {
@@ -56,7 +39,7 @@ type CustomerData struct {
 	AbnCnNumber		 	*string  `json:"abn_cn_number"`
 	DrivingLicence	 	string  `json:"driving_licence"`
 	PhotoId	 			string  `json:"photo_id"`
-	Avatar		 		*string  `json:"avatar"`
+	Avatar		 		string  `json:"avatar"`
 	Status		 		string  `json:"status"`
 }
 
@@ -77,8 +60,7 @@ func GetCustomer(c *Customer, id string) int {
 	customers.avatar,
 	customers.status
 	FROM customers
-	WHERE customers.id = ?`
-
+	WHERE customers.deleted = 0 AND customers.id = ?`
 	log.Println(query)
 	err := db.Db.Get(c, query, id)
 	if err != nil {
@@ -109,7 +91,7 @@ func GetCustomerIn(u *[]Customer, id ...string) (int, error) {
 	customers.avatar,
 	customers.status
 	FROM customers
-	WHERE customers.id 
+	WHERE customers.deleted = 0 AND customers.id 
 	IN(`
 	for index, value := range id {
 		query += value
@@ -136,7 +118,7 @@ func GetCustomerEmail(c *Customer, params string) int {
 	customers.email,
 	customers.password
 	FROM customers
-	WHERE customers.email = ?`
+	WHERE customers.deleted = 0 AND customers.email = ?`
 
 	log.Println(query)
 	err := db.Db.Get(c, query, params)
@@ -192,6 +174,7 @@ func UpdateCustomer(customer map[string]string, id string) int {
 		}
 		i++
 	}
+	query += ", updated_at = NOW()"
 	query += " WHERE id = " + id
 	log.Println(query)
 	tx, err := db.Db.Begin()

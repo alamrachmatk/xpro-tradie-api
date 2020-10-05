@@ -11,8 +11,8 @@ import (
 var	Host            string = "http://localhost:1323"
 var Port string = "1323"
 var MediaServerPath string = "D:/images"
-var MediaServerPathDl string = MediaServerPath + "/customers/driving-licence"
-var MediaServerPathAvatar string = MediaServerPath + "/customers/avatar"
+var MediaServerPathDl string = MediaServerPath + "/customers/driving-licence/"
+var MediaServerPathAvatar string = MediaServerPath + "/customers/avatar/"
 var	LimitQuery      uint64 = 100
 var ReadTimeout time.Duration = 5
 var WriteTimeout time.Duration = 10

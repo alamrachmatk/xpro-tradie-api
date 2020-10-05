@@ -5,13 +5,11 @@ import (
 	"api/db"
 	"api/models"
 	"api/lib"
-	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"log"
 	 
 	"github.com/labstack/echo"
 	"github.com/garyburd/redigo/redis"
@@ -36,53 +34,46 @@ func CustomerData(c echo.Context) error  {
 		return lib.CustomError(http.StatusForbidden)
 	}
 
-	tokenMap, err := lib.ExtractClaims(token)
-	if err != nil {
-		return lib.CustomError(http.StatusBadGateway)
-	} 
-  
-	var customer models.CustomerDataCache
-	email := tokenMap["email"]
-	redisPool.Do("SELECT", config.RedisDBCacheCustomerByEmail)
-	dataToken, err := redis.Bytes(redisPool.Do("GET", email))
-	if err != nil { 
-		return lib.CustomError(http.StatusForbidden)
-	}
-	err = json.Unmarshal(dataToken, &customer)
-	if err != nil {
-		log.Println("error unmarshalProperties:", err)
-		return lib.CustomError(http.StatusInternalServerError,
-			"Sorry, we've experience a problem. Please try again.",
-			"Internal server error")
+	idStr := c.Param("id")
+	var customer models.Customer
+	if idStr != "" {
+		id, _ := strconv.ParseUint(idStr, 10, 64)
+		if id > 0 {
+			status := models.GetCustomer(&customer, idStr)
+			if status != http.StatusOK {
+				return lib.CustomError(http.StatusNotFound)
+			}
+		}
+	} else {
+		return lib.CustomError(http.StatusBadRequest)
 	}
 
 	var data models.CustomerData
-	CustomerID, _ := strconv.ParseUint(customer.CustomerID, 10, 64)
-	data.CustomerID = CustomerID
+	data.CustomerID = customer.CustomerID
 	data.FirstName = customer.FirstName
 	data.LastName = customer.LastName
 	data.Email = customer.Email
 	data.Phone = customer.Phone
 	data.Address = customer.Address
-	if customer.Category == "1" {
+	if customer.Category == 1 {
 		data.Category = "Company"
 	} else {
 		data.Category = "Housing"
 	}
 	data.CompanyName = customer.CompanyName
 	data.AbnCnNumber = customer.AbnCnNumber
-	data.DrivingLicence = customer.DrivingLicence
+	data.DrivingLicence = config.MediaServerPathDl + customer.DrivingLicence
 	data.PhotoId = customer.PhotoId
 	if customer.Avatar != nil {
-		data.Avatar = customer.Avatar
+		data.Avatar = config.MediaServerPathAvatar + *customer.Avatar
 	} else {
-
+		data.Avatar = config.MediaServerPathAvatar + "default"
 	}
-	if customer.Status == "0" {
+	if customer.Status == 0 {
 		data.Status = "New"
-	} else if customer.Status == "1" {
+	} else if customer.Status == 1 {
 		data.Status = "Active"
-	} else if customer.Status == "2" {
+	} else if customer.Status == 2 {
 		data.Status = "Banned"
 	}
 
@@ -114,20 +105,12 @@ func UpdateCustomerData(c echo.Context) error {
 		return lib.CustomError(http.StatusForbidden)
 	}
 
-	tokenMap, err := lib.ExtractClaims(token)
-	if err != nil {
-		return lib.CustomError(http.StatusBadGateway)
-	} 
-  
-	idCache := tokenMap["customer_id"]
-
 	params := make(map[string]string)
 	idStr := c.Param("id")
 	if idStr != "" {
 		id, _ := strconv.ParseUint(idStr, 10, 64)
 		if id > 0 {
 			params["id"] = strconv.FormatUint(id,10)
-			log.Println("kl", params["id"])
 			var customer models.Customer
 			status := models.GetCustomer(&customer, idStr)
 			if status != http.StatusOK {
@@ -136,10 +119,6 @@ func UpdateCustomerData(c echo.Context) error {
 		}
 	} else {
 		return lib.CustomError(http.StatusBadRequest)
-	}
-
-	if idCache != idStr {
-		return lib.CustomError(http.StatusForbidden)
 	}
 
 	// Get parameter first name
@@ -246,6 +225,7 @@ func UpdateCustomerData(c echo.Context) error {
 	if statusUpdate != http.StatusOK {
 		return lib.CustomError(http.StatusInternalServerError)
 	}
+
 	var response lib.Response
 	response.Status.Code = http.StatusOK
 	response.Status.MessageServer = "OK"
