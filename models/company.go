@@ -19,10 +19,10 @@ func GetCompanyIn(c *[]Company, id ...string) (int, error) {
 		return http.StatusNotFound, errors.New("no supplied IDs")
 	}
 	query := `SELECT 
-	companies.id, 
-	companies.name 
-	FROM companies 
-	WHERE id IN(`
+		companies.id, 
+		companies.name 
+		FROM companies 
+		WHERE id IN(`
 	for index, value := range id {
 		query += value
 		if (len(id) - 1) > index {

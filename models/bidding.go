@@ -22,12 +22,18 @@ type Bidding struct {
 
 type BiddingList struct {
 	BiddingID 	uint64 			`json:"bidding_id"`
-	OrderID    	uint64 			`json:"order_id"`
-	Company   	CompanyInfo		`json:"company,omitempty"`
 	LaborTime   string 			`json:"labor_time"`
 	Price 	 	float32 		`json:"price"`
 	Description string 			`json:"description"`
+	Order		OrderInfo		`json:"order,omitempty"`
+	Company   	CompanyInfo		`json:"company,omitempty"`
 	Status 		string 			`json:"status"`
+}
+
+type OrderInfo struct {
+	OrderID		uint64	`json:"order_id"`
+	NewOrderID	uint64	`json:"new_order_id"`
+	WorkOrderID	uint64	`json:"work_order_id"`
 }
 
 type CompanyInfo struct {

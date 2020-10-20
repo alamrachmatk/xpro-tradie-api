@@ -8,6 +8,32 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type NewOrder struct {
+	NewOrderID			uint64	`db:"id" json:"new_order_id"`
+	CustomerID			uint64	`db:"customer_id" json:"customer_id"`
+	CompanySettingID	uint64	`db:"customer_id" json:"customer_id"`
+}
+
+func GetNewOrder(c *NewOrder, id string) int {
+	query := `SELECT
+	new_orders.id,
+	new_orders.name,
+	new_orders.customer_id,
+	new_orders.company_setting_id,
+	new_orders.due_date
+	FROM new_orders
+	WHERE new_orders.id = ?`
+
+	log.Println(query)
+	err := db.Db.Get(c, query, id)
+	if err != nil {
+		log.Println(err)
+		return http.StatusNotFound
+	}
+
+	return http.StatusOK
+}
+
 func CreateNewOrder(params map[string]string) (int, int64) {
 	query := "INSERT INTO new_orders("
 	var fields = ""

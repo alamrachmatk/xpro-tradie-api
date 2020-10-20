@@ -90,36 +90,51 @@ func BiddingListQuery(limit uint64, offset uint64, pagination bool) (uint64, []m
 	}
 
 	var companyIDs []string
-	for _, bidding := range biddings {
+	var orderID string
+
+	for key, bidding := range biddings {
+		if key == 0 {
+			orderID = strconv.FormatUint(bidding.OrderID,10)
+		}
 		if bidding.CompanyID > 0 {
 			companyIDs = append(companyIDs, strconv.FormatUint(bidding.CompanyID, 10))
 		}
-	}
+	} 
 
 	var companies []models.Company
+	var order models.Order
+
 	models.GetCompanyIn(&companies, companyIDs...)
+	models.GetOrder(&order, orderID)
 
 	companiesMap := make(map[uint64]models.Company)
+	orderMap := make(map[uint64]models.Order)
 
 	for _, company := range companies {
 		companiesMap[company.CompanyID] = company
 	}
 
+	orderMap[order.OrderID] = order
+	
 	var responseData []models.BiddingList
 	for _, bidding := range biddings {
 		var data models.BiddingList
 		data.BiddingID = bidding.BiddingID
-		data.OrderID = bidding.OrderID
- 
+
+		data.LaborTime = bidding.LaborTime
+		data.Price = bidding.Price
+		data.Description = bidding.Description
+		if bidding.OrderID > 0 {
+			order := orderMap[bidding.OrderID]
+			data.Order.OrderID = order.OrderID
+			data.Order.NewOrderID = order.NewOrderID
+			data.Order.WorkOrderID = order.WorkOrderID
+		}
 		if bidding.CompanyID > 0 {
 			company := companiesMap[bidding.CompanyID]
 			data.Company.CompanyID = company.CompanyID
 			data.Company.Name = company.Name
 		}
-
-		data.LaborTime = bidding.LaborTime
-		data.Price = bidding.Price
-		data.Description = bidding.Description
 		data.Status = bidding.Status
 
 		responseData = append(responseData, data)
