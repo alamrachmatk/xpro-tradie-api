@@ -8,37 +8,34 @@ import (
 )
 
 // General
-var	Host            string = "http://localhost:1323"
+var Host string = "http://localhost:1323"
 var Port string = "1323"
-var MediaServerPath string = "D:/images"
-var MediaServerPathDl string = MediaServerPath + "/customers/driving-licence/"
-var MediaServerPathAvatar string = MediaServerPath + "/customers/avatar/"
-var	LimitQuery      uint64 = 100
+var LimitQuery uint64 = 100
 var ReadTimeout time.Duration = 5
 var WriteTimeout time.Duration = 10
 var IdleTimeout time.Duration = 120
 
 // MariaDB
-var	MariaDBUser     string = "root"
-var	MariaDBPassword string = ""
-var	MariaDBDB       string = "xpro_tradie"
-var	MariaDBHost     string = "localhost"
-var	MariaDBPort     string = "3306"
+var MariaDBUser string = "dnsfilter"
+var MariaDBPassword string = "rahasiadns"
+var MariaDBDB string = "dnsfilter"
+var MariaDBHost string = "175.106.8.72"
+var MariaDBPort string = "3306"
 
 // Redis
-var	RedisHost string = "localhost"
-var	RedisPort string = "6379"
+var RedisHost string = "localhost"
+var RedisPort string = "6379"
 
 var RedisMaxIdle uint64 = 80
 var RedisMaxActive uint64 = 10000
 var RedisIdleTimeout uint64 = 5
 var RedisWait = true
 
-var RedisDBCacheToken int  = 0
-var RedisDBCacheCustomerByEmail int  = 1
+var RedisDBCacheToken int = 0
+var RedisDBCacheCustomerByEmail int = 1
 
 // Cache
-var ExpireToken uint64 = 3600        // 1 hour
+var ExpireToken uint64 = 3600 // 1 hour
 
 // JWT xspr0Tr@Die
 var JWTSecret string = "SL6ANV4cMfu2cBI240iV0xYLgv6RxUIh"
@@ -52,22 +49,22 @@ type mariaDB struct {
 }
 
 type redis struct {
-	RedisHost            	  	*string
-	RedisPort            	  	*string
-	RedisMaxIdle         		*uint64
-	RedisMaxActive       		*uint64
-	RedisIdleTimeout     		*uint64
-	RedisWait            	   	*bool
+	RedisHost                   *string
+	RedisPort                   *string
+	RedisMaxIdle                *uint64
+	RedisMaxActive              *uint64
+	RedisIdleTimeout            *uint64
+	RedisWait                   *bool
 	RedisDBCacheCustomerByEmail *int
 }
 
 type general struct {
-	Host            		*string
-	Port            		*string
-	MediaServerPath 		*string
-	MediaServerPathDl 		*string
-	MediaServerPathAvatar 	*string
-	LimitQuery      		*uint64
+	Host                  *string
+	Port                  *string
+	MediaServerPath       *string
+	MediaServerPathDl     *string
+	MediaServerPathAvatar *string
+	LimitQuery            *uint64
 	// ReadTimeout covers the time from when the connection is accepted to
 	// when the request body is fully read
 	ReadTimeout *time.Duration
@@ -84,10 +81,10 @@ type jwt struct {
 }
 
 type config struct {
-	General       general
-	MariaDB       mariaDB
-	Redis         redis
-	JWT           jwt
+	General general
+	MariaDB mariaDB
+	Redis   redis
+	JWT     jwt
 }
 
 func InitConfig() error {
@@ -111,15 +108,6 @@ func InitConfig() error {
 	}
 	if cfg.General.Port != nil {
 		Port = *cfg.General.Port
-	}
-	if cfg.General.MediaServerPath != nil {
-		MediaServerPath = *cfg.General.MediaServerPath
-	}
-	if cfg.General.MediaServerPathDl != nil {
-		MediaServerPathDl = *cfg.General.MediaServerPathDl
-	}
-	if cfg.General.MediaServerPathAvatar != nil {
-		MediaServerPathAvatar = *cfg.General.MediaServerPathAvatar
 	}
 	if cfg.General.ReadTimeout != nil {
 		ReadTimeout = *cfg.General.ReadTimeout
@@ -169,7 +157,6 @@ func InitConfig() error {
 	if cfg.JWT.JWTSecret != nil {
 		JWTSecret = *cfg.JWT.JWTSecret
 	}
-	
 
 	return nil
 }
