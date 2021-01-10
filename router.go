@@ -30,11 +30,12 @@ func NewRouter() *echo.Echo {
 
 	// Routes
 	api := e.Group("/apiv1")
-	api.GET("/totalsite", controllers.GetTotalSite)
+	api.GET("/totaldns", controllers.GetTotalDns)
+	api.GET("/totalblok", controllers.GetTotalBlok)
+	api.GET("/totaldnsblok", controllers.GetTotalDnsBlok)
 	api.GET("/totaltopmostactivelist", controllers.GeTotalTopMostActiveList)
+	api.GET("/dns", controllers.GetAllDns)
 	api.GET("/sites", controllers.GetAllSites)
-	api.GET("/parsingdomain", controllers.ParsingDomain)
-	api.GET("/convertdate", controllers.ConvertDate)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))

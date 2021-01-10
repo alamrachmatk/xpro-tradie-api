@@ -8,10 +8,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type TotalSite struct {
-	SiteAll uint64 `json:"site_all"`
-}
-
 type Site struct {
 	SiteID    uint64  `db:"id" json:"site_id"`
 	Ip        string  `db:"ip" json:"ip"`

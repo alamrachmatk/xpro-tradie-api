@@ -12,10 +12,10 @@ import (
 	"github.com/labstack/echo"
 )
 
-func GetTotalSite(c echo.Context) error {
-	var responseData models.TotalSite
+func GetTotalDns(c echo.Context) error {
+	var responseData models.TotalDns
 
-	key := "totalsites"
+	key := "totaldns"
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
 	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
@@ -24,7 +24,41 @@ func GetTotalSite(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, responseData)
 	}
 
-	responseData.SiteAll = total
+	responseData.DnsAll = total
+
+	return c.JSON(http.StatusOK, responseData)
+}
+
+func GetTotalBlok(c echo.Context) error {
+	var responseData models.TotalBlok
+
+	key := "totalblok"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, responseData)
+	}
+
+	responseData.BlokAll = total
+
+	return c.JSON(http.StatusOK, responseData)
+}
+
+func GetTotalDnsBlok(c echo.Context) error {
+	var responseData models.TotalDnsBlok
+
+	key := "totaldnsblok"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, responseData)
+	}
+
+	responseData.DnsBlok = total
 
 	return c.JSON(http.StatusOK, responseData)
 }
@@ -34,7 +68,7 @@ func GeTotalTopMostActiveList(c echo.Context) error {
 
 	var totalTopMostActiveList []models.TotalTopMostActiveList
 	// responseData, _ = TotalTopMostActiveListQuery(limit)
-	key := "mostactive"
+	key := "mostactivelist"
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
 	totalTopMostActiveResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
@@ -47,22 +81,3 @@ func GeTotalTopMostActiveList(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, totalTopMostActiveList)
 }
-
-// func TotalTopMostActiveListQuery(limit uint64) ([]models.TotalTopMostActiveList, *echo.HTTPError) {
-// 	var mostactives []models.MostActive
-// 	err := models.GetTotalTopMostActiveListQuery(&mostactives, limit)
-// 	if err != nil {
-// 		return nil, lib.CustomError(http.StatusInternalServerError)
-// 	}
-
-// 	var responseData []models.TotalTopMostActiveList
-// 	for _, mostactive := range mostactives {
-// 		var data models.TotalTopMostActiveList
-// 		data.BaseDomain = *mostactive.BaseDomain
-// 		data.Total = *mostactive.TotalMostActive
-
-// 		responseData = append(responseData, data)
-// 	}
-
-// 	return responseData, nil
-// }
