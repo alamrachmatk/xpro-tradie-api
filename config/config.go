@@ -16,10 +16,10 @@ var WriteTimeout time.Duration = 10
 var IdleTimeout time.Duration = 120
 
 // MariaDB
-var MariaDBUser string = "dnsfilter"
-var MariaDBPassword string = "rahasiadns"
-var MariaDBDB string = "dnsfilter"
-var MariaDBHost string = "175.106.8.72"
+var MariaDBUser string = "root"
+var MariaDBPassword string = "quantum"
+var MariaDBDB string = "quantumdns"
+var MariaDBHost string = "175.106.13.14"
 var MariaDBPort string = "3306"
 
 // Redis

@@ -29,10 +29,10 @@ func GetTotalDns(c echo.Context) error {
 	return c.JSON(http.StatusOK, responseData)
 }
 
-func GetTotalBlok(c echo.Context) error {
-	var responseData models.TotalBlok
+func GetTotalBlock(c echo.Context) error {
+	var responseData models.TotalBlock
 
-	key := "totalblok"
+	key := "totalblock"
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
 	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
@@ -41,15 +41,15 @@ func GetTotalBlok(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, responseData)
 	}
 
-	responseData.BlokAll = total
+	responseData.BlockAll = total
 
 	return c.JSON(http.StatusOK, responseData)
 }
 
-func GetTotalDnsBlok(c echo.Context) error {
-	var responseData models.TotalDnsBlok
+func GetTotalDnsBlock(c echo.Context) error {
+	var responseData models.TotalDnsBlock
 
-	key := "totaldnsblok"
+	key := "totaldnsblock"
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
 	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
@@ -58,7 +58,24 @@ func GetTotalDnsBlok(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, responseData)
 	}
 
-	responseData.DnsBlok = total
+	responseData.DnsBlock = total
+
+	return c.JSON(http.StatusOK, responseData)
+}
+
+func GetTotalIpAddress(c echo.Context) error {
+	var responseData models.TotalIpAddress
+
+	key := "totalipaddress"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	total, err := redis.Uint64(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, responseData)
+	}
+
+	responseData.IpAddressAll = total
 
 	return c.JSON(http.StatusOK, responseData)
 }
@@ -67,17 +84,88 @@ func GeTotalTopMostActiveList(c echo.Context) error {
 	var err error
 
 	var totalTopMostActiveList []models.TotalTopMostActiveList
-	// responseData, _ = TotalTopMostActiveListQuery(limit)
-	key := "mostactivelist"
+	key := "totalmostactivelist"
 	redisPool := db.RedisPool.Get()
 	defer redisPool.Close()
-	totalTopMostActiveResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
+	totalTopMostActiveListResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
 	if err != nil {
 		log.Println(err)
 		return lib.CustomError(http.StatusNotFound)
 	} else {
-		json.Unmarshal([]byte(totalTopMostActiveResult), &totalTopMostActiveList)
+		json.Unmarshal([]byte(totalTopMostActiveListResult), &totalTopMostActiveList)
 	}
 
 	return c.JSON(http.StatusOK, totalTopMostActiveList)
+}
+
+func GeTotalDnsDayList(c echo.Context) error {
+	var err error
+
+	var totalDnsDayList []models.TotalDnsDayList
+	key := "totaldnsdaylist"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	totalDnsDayListResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusNotFound)
+	} else {
+		json.Unmarshal([]byte(totalDnsDayListResult), &totalDnsDayList)
+	}
+
+	return c.JSON(http.StatusOK, totalDnsDayList)
+}
+
+func GeTotalIpAddressDayList(c echo.Context) error {
+	var err error
+
+	var totalIpAddressDayList []models.TotalIpAddressDayList
+	key := "totalipaddressdaylist"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	totalDnsDayListResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusNotFound)
+	} else {
+		json.Unmarshal([]byte(totalDnsDayListResult), &totalIpAddressDayList)
+	}
+
+	return c.JSON(http.StatusOK, totalIpAddressDayList)
+}
+
+func GeTotalIpAddressBlockCategoryDayList(c echo.Context) error {
+	var err error
+
+	var totalIpAddressBlockCategoryDayList []models.TotalIpAddressBlockCategoryDayList
+	key := "totalipaddressblockcategorydaylist"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	totalIpAddressBlockCategoryDayListResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusNotFound)
+	} else {
+		json.Unmarshal([]byte(totalIpAddressBlockCategoryDayListResult), &totalIpAddressBlockCategoryDayList)
+	}
+
+	return c.JSON(http.StatusOK, totalIpAddressBlockCategoryDayList)
+}
+
+func GeTotalDnsBlockCategoryDayList(c echo.Context) error {
+	var err error
+
+	var totalDnsBlockCategoryDayList []models.TotalDnsBlockCategoryDayList
+	key := "totalipaddressblockcategorydaylist"
+	redisPool := db.RedisPool.Get()
+	defer redisPool.Close()
+	totalDnsBlockCategoryDayListResult, err := redis.Bytes(redisPool.Do("GET", key+".value"))
+	if err != nil {
+		log.Println(err)
+		return lib.CustomError(http.StatusNotFound)
+	} else {
+		json.Unmarshal([]byte(totalDnsBlockCategoryDayListResult), &totalDnsBlockCategoryDayList)
+	}
+
+	return c.JSON(http.StatusOK, totalDnsBlockCategoryDayList)
 }

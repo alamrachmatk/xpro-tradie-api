@@ -56,10 +56,17 @@ func GetAllDns(c echo.Context) error {
 		}
 	}
 
+	params := make(map[string]string)
+
+	title := c.QueryParam("title")
+	if title != "" {
+		params["title"] = title
+	}
+
 	var total uint64
 	var responseData []models.DnsList
 	var httpError *echo.HTTPError
-	total, responseData, httpError = DnsListQuery(limit, offset, pagination)
+	total, responseData, httpError = DnsListQuery(limit, offset, pagination, params)
 	if httpError.Code != http.StatusOK {
 		return httpError
 	}
@@ -76,9 +83,9 @@ func GetAllDns(c echo.Context) error {
 
 }
 
-func DnsListQuery(limit uint64, offset uint64, pagination bool) (uint64, []models.DnsList, *echo.HTTPError) {
+func DnsListQuery(limit uint64, offset uint64, pagination bool, params map[string]string) (uint64, []models.DnsList, *echo.HTTPError) {
 	var dns []models.Dns
-	total, err := models.GetAllDns(&dns, limit, offset, pagination, nil)
+	total, err := models.GetAllDns(&dns, limit, offset, pagination, params)
 	if err != nil {
 		return 0, nil, lib.CustomError(http.StatusInternalServerError)
 	}

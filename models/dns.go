@@ -32,31 +32,25 @@ type DnsList struct {
 	CreatedAt    string `json:"created_at"`
 }
 
+type TotalDnsDayList struct {
+	DayName string `json:"day_name"`
+	Total   uint64 `json:"total"`
+}
+
 func GetAllDns(c *[]Dns, limit uint64, offset uint64, pagination bool, params map[string]string) (uint64, error) {
 	query := `SELECT * FROM dns`
 	var condition string
 	// Combine where clause
 	clause := false
 	for key, value := range params {
-		if (key != "orderBy") && (key != "orderType") {
+		if key == "title" {
 			if clause == false {
-				condition += " WHERE"
-			} else {
-				condition += " AND"
+				condition += " WHERE domain LIKE '%" + value + "%'"
+				condition += " OR ip_address LIKE '%" + value + "%'"
 			}
-			condition += " dns." + key + " = '" + value + "'"
-			clause = true
 		}
 	}
-	// Check order by
-	var present bool
-	var orderBy, orderType string
-	if orderBy, present = params["orderBy"]; present == true {
-		condition += " ORDER BY dns." + orderBy
-		if orderType, present = params["orderType"]; present == true {
-			condition += " " + orderType
-		}
-	}
+
 	query += condition
 	// Query limit and offset
 	query += " LIMIT " + strconv.FormatUint(limit, 10)
